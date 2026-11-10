@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="国家公務員の勤勉手当の成績率を逆算する計算ツール">
+<title>国家公務員 勤勉手当 成績率計算</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;color:#202938;background:#f3f5f8}
+*{box-sizing:border-box}body{margin:0;padding:20px 12px 40px}
+main{max-width:720px;margin:auto}
+header{margin:8px 2px 18px}h1{font-size:1.45rem;line-height:1.4;margin:0 0 8px}
+.lead{color:#5b6573;font-size:.93rem;line-height:1.65;margin:0}
+.card{background:#fff;border:1px solid #e1e6ed;border-radius:16px;padding:18px;margin:14px 0;box-shadow:0 2px 8px #1d29390a}
+h2{font-size:1.05rem;margin:0 0 14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{min-width:0}.field.full{grid-column:1/-1}
+label{display:block;font-size:.9rem;font-weight:650;margin-bottom:6px}
+input,select{width:100%;min-height:46px;border:1px solid #cbd3df;border-radius:9px;padding:10px 12px;font-size:1rem;background:#fff;color:#172033}
+input:focus,select:focus{outline:3px solid #cfe1ff;border-color:#3978cf}
+.hint{font-size:.78rem;color:#687385;line-height:1.5;margin:5px 0 0}
+.readout{background:#f7f9fc;border-radius:10px;padding:12px 14px;margin-top:12px;line-height:1.6}
+.readout strong{font-variant-numeric:tabular-nums}
+.result{background:#edf5ff;border:1px solid #c9ddf6}
+.resultMetrics{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+.resultMetric{min-width:0;background:#fff;border:1px solid #d7e4f4;border-radius:10px;padding:12px}
+.result .big{font-size:2.1rem;font-weight:800;color:#124b8c;letter-spacing:-.02em;line-height:1.3;overflow-wrap:anywhere}
+.result .caption{font-size:.85rem;color:#465a72;font-weight:650}
+.breakdown{display:grid;grid-template-columns:1fr auto;gap:8px 12px;font-size:.9rem}
+.breakdown div:nth-child(even){text-align:right;font-variant-numeric:tabular-nums}
+button{border:0;border-radius:10px;background:#245fa8;color:white;font-size:1rem;font-weight:700;padding:13px 18px;width:100%;cursor:pointer}
+button:active{transform:translateY(1px)}
+.note{font-size:.82rem;color:#596474;line-height:1.7}
+.warn{color:#8a4a00;background:#fff7e9;border-radius:9px;padding:10px 12px;font-size:.83rem;line-height:1.6}
+footer{font-size:.78rem;color:#6b7280;line-height:1.7;padding:4px 3px}
+@media(max-width:520px){body{padding:14px 10px 28px}.card{padding:15px}.grid{grid-template-columns:1fr}.field.full{grid-column:auto}.resultMetrics{gap:8px}.resultMetric{padding:10px 8px}.result .big{font-size:1.65rem}.result .caption{font-size:.78rem}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>国家公務員 勤勉手当 成績率計算</h1>
+<p class="lead">行政職俸給表（一）の級・号俸と勤勉手当の支給額から、成績率を逆算します。</p>
+</header>
+
+<section class="card">
+<h2>1. 職員・支給額</h2>
+<div class="grid">
+<div class="field">
+<label for="grade">職務の級</label>
+<select id="grade"></select>
+</div>
+<div class="field">
+<label for="step">号俸</label>
+<input id="step" type="number" min="1" max="125" step="1" placeholder="例：25" inputmode="numeric">
+</div>
+<div class="field">
+<label for="roleType">役職</label>
+<select id="roleType">
+<option value="nonmanager" selected>非管理職</option>
+<option value="manager">管理職</option>
+</select>
+</div>
+<div class="field full">
+<label>俸給月額</label>
+<div class="readout"><strong id="salary">級・号俸を入力してください</strong></div>
+</div>
+<div class="field full">
+<label for="paid">勤勉手当の実際の支給額（円）</label>
+<input id="paid" type="number" min="1" step="1" placeholder="例：350000" inputmode="numeric">
+<p class="hint">税・社会保険料等控除前の支給額を入力してください。</p>
+</div>
+<div class="field">
+<label for="period">支給期</label>
+<select id="period"><option value="june">6月期</option><option value="december">12月期</option></select>
+</div>
+<div class="field">
+<label for="service">期間率</label>
+<select id="service">
+<option value="1">6箇月（100%）</option>
+<option value="0.95">5箇月15日以上6箇月未満（95%）</option>
+<option value="0.9">5箇月以上5箇月15日未満（90%）</option>
+<option value="0.8">4箇月15日以上5箇月未満（80%）</option>
+<option value="0.7">4箇月以上4箇月15日未満（70%）</option>
+<option value="0.6">3箇月15日以上4箇月未満（60%）</option>
+<option value="0.5">3箇月以上3箇月15日未満（50%）</option>
+<option value="0.4">2箇月15日以上3箇月未満（40%）</option>
+<option value="0.3">2箇月以上2箇月15日未満（30%）</option>
+<option value="0.2">1箇月15日以上2箇月未満（20%）</option>
+<option value="0.15">1箇月以上1箇月15日未満（15%）</option>
+<option value="0.1">15日以上1箇月未満（10%）</option>
+<option value="0.05">15日未満（5%）</option>
+<option value="0">勤務期間なし（0%）</option>
+</select>
+</div>
+</div>
+</section>
+
+<section class="card">
+<h2>2. 算定基礎額に加える手当</h2>
+<p class="note">地域手当率と扶養手当を反映します。役職段階別加算額および管理職加算額は、役職・級等に応じて自動計算します。</p>
+<div class="grid">
+<div class="field full">
+<label for="workplace">勤務地（都道府県・市町村）</label>
+<select id="workplace">
+  <optgroup label="20％">
+    <option value="20" selected>東京都特別区</option>
+  </optgroup>
+  <optgroup label="16％">
+    <option value="16">東京都（特別区を除く）</option>
+    <option value="16">横浜市</option>
+    <option value="16">大阪市</option>
+  </optgroup>
+  <optgroup label="12％">
+    <option value="12">神奈川県（横浜市を除く）</option>
+    <option value="12">大阪府（大阪市を除く）</option>
+    <option value="12">さいたま市</option>
+    <option value="12">千葉市</option>
+    <option value="12">名古屋市</option>
+  </optgroup>
+  <optgroup label="8％">
+    <option value="8">愛知県（名古屋市を除く）</option>
+    <option value="8">京都府</option>
+    <option value="8">仙台市</option>
+    <option value="8">静岡市</option>
+    <option value="8">神戸市</option>
+    <option value="8">広島市</option>
+    <option value="8">福岡市</option>
+  </optgroup>
+  <optgroup label="4％">
+    <option value="4">茨城県</option>
+    <option value="4">栃木県</option>
+    <option value="4">埼玉県（さいたま市を除く）</option>
+    <option value="4">千葉県（千葉市を除く）</option>
+    <option value="4">静岡県（静岡市を除く）</option>
+    <option value="4">三重県</option>
+    <option value="4">滋賀県</option>
+    <option value="4">兵庫県（神戸市を除く）</option>
+    <option value="4">奈良県</option>
+    <option value="4">広島県（広島市を除く）</option>
+    <option value="4">福岡県（福岡市を除く）</option>
+    <option value="4">札幌市</option>
+    <option value="4">岡山市</option>
+    <option value="4">高松市</option>
+  </optgroup>
+  <optgroup label="0％">
+    <option value="0">その他</option>
+  </optgroup>
+</select>
+<p class="hint">勤務地を選択すると、地域手当率が自動設定されます。</p>
+</div>
+<div class="field">
+<label for="childrenUnder16">扶養親族である子（0歳～15歳年度末）</label>
+<select id="childrenUnder16">
+  <option value="0" selected>0人</option>
+  <option value="1">1人</option><option value="2">2人</option><option value="3">3人</option>
+  <option value="4">4人</option><option value="5">5人</option><option value="6">6人</option>
+  <option value="7">7人</option><option value="8">8人</option><option value="9">9人</option><option value="10">10人</option>
+</select>
+<p class="hint">1人当たり月額13,000円</p>
+</div>
+<div class="field">
+<label for="children16to22">扶養親族である子（16歳年度初め～22歳年度末）</label>
+<select id="children16to22">
+  <option value="0" selected>0人</option>
+  <option value="1">1人</option><option value="2">2人</option><option value="3">3人</option>
+  <option value="4">4人</option><option value="5">5人</option><option value="6">6人</option>
+  <option value="7">7人</option><option value="8">8人</option><option value="9">9人</option><option value="10">10人</option>
+</select>
+<p class="hint">1人当たり月額18,000円</p>
+</div>
+<div class="field">
+<label for="roleAllowance">役職段階別加算額（月額・円・自動計算）</label>
+<input id="roleAllowance" type="number" min="0" step="1" value="0" readonly aria-readonly="true">
+<p class="hint">級に応じた役職加算割合を、俸給月額と地域手当月額の合計額に乗じて算出します（<span id="roleRate">0</span>）。</p>
+</div>
+<div class="field">
+<label for="managerAllowance">管理職加算額（月額・円・自動計算）</label>
+<input id="managerAllowance" type="number" min="0" step="1" value="0" readonly aria-readonly="true">
+<p class="hint">役職が「管理職」の場合、俸給月額に級別割合を乗じて自動計算します。</p>
+</div>
+</div>
+<p class="hint">扶養手当は、0歳～15歳年度末の子1人につき月額13,000円、16歳年度初め～22歳年度末の子1人につき月額18,000円として自動計算します。地域手当月額は（俸給月額＋扶養手当月額）×勤務地ごとの地域手当率で計算します。役職段階別加算額は級に応じて自動計算されます。管理職加算額は、役職が「管理職」の場合に俸給月額と級別割合から自動計算します。</p>
+</section>
+
+<section class="card">
+<h2>3. 計算結果</h2>
+<div class="readout result">
+<div class="resultMetrics">
+<div class="resultMetric">
+<div class="caption">逆算した成績率</div>
+<div class="big" id="result">—</div>
+</div>
+<div class="resultMetric">
+<div class="caption">評価</div>
+<div class="big" id="evaluationResult">—</div>
+</div>
+</div>
+<div class="caption" id="resultSub" style="margin-top:10px">必要項目を入力すると自動計算します。</div>
+</div>
+<div class="readout">
+<div class="breakdown">
+<div>俸給月額</div><div id="bSalary">—</div>
+<div>扶養手当月額</div><div id="bDependent">—</div>
+<div>地域手当月額</div><div id="bRegion">—</div>
+<div>役職段階別加算額</div><div id="bRole">—</div>
+<div>管理職加算額</div><div id="bManager">—</div>
+<div><strong>算定基礎額</strong></div><div id="bBase"><strong>—</strong></div>
+<div>期間率</div><div id="bPeriod">—</div>
+<div>勤勉手当支給額</div><div id="bPaid">—</div>
+</div>
+</div>
+<p id="message" class="warn" style="display:none"></p>
+</section>
+
+<section class="card">
+<h2>計算式</h2>
+<p class="note"><strong>成績率 ＝ 勤勉手当支給額 ÷（算定基礎額 × 期間率）</strong></p>
+<p class="note">地域手当月額 ＝（俸給月額＋扶養手当月額）×地域手当率。本ツールは入力値に基づく逆算です。実際の支給額に端数処理、支給額の調整、勤務時間数による按分その他の個別事情が含まれる場合、給与明細上の額と一致しないことがあります。</p>
+</section>
+<footer>
+俸給月額データ：保存済みの行政職俸給表（一）データを使用。<br>
+期間率：人事院規則九―四〇第10条・別表第二。<br>
+成績率は人事院規則九―四〇第13条等に基づき各庁の長が定めるものであり、この計算結果は実際の人事評価区分や決定済み成績率を確定するものではありません。
+</footer>
+</main>
+<script>
+const salaryTable = {"1":{"1":195800,"2":196900,"3":198100,"4":199200,"5":200300,"6":202000,"7":203600,"8":205200,"9":206700,"10":208400,"11":210000,"12":211600,"13":213100,"14":214800,"15":216500,"16":218200,"17":219400,"18":221000,"19":222600,"20":224100,"21":225600,"22":227200,"23":228800,"24":230400,"25":232000,"26":233700,"27":235000,"28":236300,"29":237600,"30":238700,"31":239800,"32":240900,"33":242000,"34":242900,"35":243800,"36":244800,"37":245800,"38":246700,"39":247600,"40":248400,"41":249200,"42":249900,"43":250500,"44":251100,"45":251800,"46":252400,"47":253000,"48":253600,"49":254100,"50":254700,"51":255300,"52":255800,"53":256200,"54":256600,"55":256900,"56":257200,"57":257500,"58":257800,"59":258100,"60":258400,"61":258700,"62":259000,"63":259300,"64":259600,"65":259900,"66":260200,"67":260500,"68":260800,"69":261100,"70":261400,"71":261700,"72":262000,"73":262300,"74":262600,"75":262900,"76":263200,"77":263500,"78":263800,"79":264100,"80":264400,"81":264700,"82":265000,"83":265300,"84":265600,"85":265900,"86":266200,"87":266500,"88":266800,"89":267100,"90":267400,"91":267700,"92":268000,"93":268300},"2":{"1":242000,"2":243300,"3":244700,"4":246100,"5":247500,"6":248900,"7":250300,"8":251700,"9":253100,"10":254300,"11":255600,"12":256900,"13":258100,"14":259300,"15":260500,"16":261700,"17":262800,"18":263900,"19":265000,"20":266100,"21":267000,"22":268000,"23":269000,"24":270000,"25":271000,"26":271900,"27":272700,"28":273600,"29":274400,"30":275200,"31":276000,"32":276700,"33":277400,"34":278200,"35":279000,"36":279600,"37":280300,"38":281100,"39":281800,"40":282500,"41":283200,"42":283900,"43":284600,"44":285300,"45":286000,"46":286600,"47":287300,"48":287900,"49":288600,"50":289200,"51":289900,"52":290600,"53":291100,"54":291700,"55":292300,"56":293000,"57":293600,"58":294200,"59":294800,"60":295500,"61":296100,"62":296700,"63":297200,"64":297700,"65":298200,"66":298800,"67":299300,"68":299900,"69":300300,"70":300800,"71":301300,"72":301900,"73":302400,"74":302800,"75":303100,"76":303400,"77":303600,"78":303900,"79":304100,"80":304400,"81":304600,"82":304800,"83":305100,"84":305300,"85":305600,"86":305800,"87":306100,"88":306400,"89":306700,"90":307000,"91":307300,"92":307600,"93":307800,"94":308000,"95":308300,"96":308700,"97":308900,"98":309200,"99":309500,"100":309900,"101":310100,"102":310400,"103":310700,"104":311000,"105":311200,"106":311500,"107":311800,"108":312100,"109":312300,"110":312600,"111":313000,"112":313300,"113":313500,"114":313700,"115":314000,"116":314400,"117":314600,"118":314800,"119":315100,"120":315400,"121":315700,"122":315900,"123":316200,"124":316500,"125":316800},"3":{"1":276300,"2":277300,"3":278300,"4":279300,"5":280300,"6":281300,"7":282200,"8":283200,"9":284200,"10":285200,"11":286200,"12":287200,"13":288200,"14":289500,"15":290800,"16":292000,"17":293200,"18":294500,"19":295700,"20":296900,"21":297900,"22":299100,"23":300300,"24":301600,"25":302900,"26":303900,"27":304900,"28":305900,"29":307000,"30":308200,"31":309300,"32":310500,"33":311600,"34":312900,"35":314200,"36":315500,"37":316700,"38":318000,"39":319300,"40":320600,"41":321900,"42":323100,"43":324400,"44":325500,"45":326400,"46":327700,"47":329000,"48":330300,"49":331400,"50":332700,"51":333900,"52":335100,"53":336400,"54":337400,"55":338500,"56":339600,"57":340300,"58":341200,"59":341900,"60":342700,"61":343500,"62":343900,"63":344400,"64":345100,"65":345900,"66":346600,"67":347300,"68":347900,"69":348400,"70":349000,"71":349500,"72":350100,"73":350400,"74":350900,"75":351200,"76":351600,"77":352000,"78":352500,"79":353000,"80":353500,"81":353800,"82":354200,"83":354600,"84":355000,"85":355300,"86":355700,"87":356100,"88":356500,"89":356700,"90":357100,"91":357500,"92":357900,"93":358100,"94":358400,"95":358800,"96":359100,"97":359400,"98":359800,"99":360200,"100":360600,"101":361100,"102":361500,"103":361900,"104":362300,"105":362800,"106":363200,"107":363500,"108":363800,"109":364200},"4":{"1":309800,"2":311300,"3":312700,"4":314100,"5":315500,"6":316600,"7":317600,"8":318800,"9":320000,"10":321600,"11":323200,"12":324800,"13":326200,"14":327800,"15":329400,"16":331000,"17":332400,"18":334100,"19":335700,"20":337300,"21":338700,"22":340400,"23":342100,"24":343700,"25":344900,"26":346800,"27":348500,"28":350100,"29":351600,"30":353200,"31":354800,"32":356400,"33":358100,"34":359900,"35":361700,"36":363500,"37":365000,"38":366400,"39":367800,"40":369200,"41":370700,"42":371500,"43":372400,"44":373400,"45":374300,"46":375400,"47":376300,"48":377300,"49":378200,"50":378900,"51":379600,"52":380200,"53":380600,"54":381200,"55":381800,"56":382500,"57":382800,"58":383500,"59":384200,"60":384800,"61":385100,"62":385600,"63":386200,"64":386800,"65":387100,"66":387700,"67":388400,"68":389000,"69":389400,"70":389900,"71":390500,"72":391000,"73":391500,"74":392100,"75":392500,"76":392800,"77":393200,"78":393700,"79":394100,"80":394500,"81":394900,"82":395400,"83":395800,"84":396200,"85":396500},"5":{"1":332600,"2":334400,"3":336200,"4":337900,"5":339600,"6":341300,"7":343000,"8":344600,"9":346200,"10":347900,"11":349600,"12":351200,"13":352700,"14":354300,"15":355900,"16":357400,"17":358800,"18":360500,"19":362100,"20":363700,"21":364800,"22":366300,"23":367800,"24":369300,"25":371000,"26":372800,"27":374400,"28":376100,"29":377500,"30":378800,"31":380000,"32":381400,"33":382500,"34":383400,"35":384400,"36":385400,"37":386200,"38":387100,"39":388000,"40":388800,"41":389600,"42":390400,"43":391200,"44":391900,"45":392600,"46":393300,"47":394000,"48":394700,"49":395200,"50":395800,"51":396400,"52":397100,"53":397500,"54":398100,"55":398700,"56":399200,"57":399600,"58":400200,"59":400800,"60":401300,"61":401700,"62":402200,"63":402700,"64":403300,"65":403600,"66":404000,"67":404300,"68":404700,"69":405000,"70":405300,"71":405600,"72":405800,"73":406000,"74":406300,"75":406600,"76":406800,"77":407000,"78":407300,"79":407600,"80":407800,"81":408000,"82":408300,"83":408600,"84":408800,"85":409000},"6":{"1":366800,"2":368500,"3":370100,"4":371700,"5":373300,"6":375100,"7":376600,"8":378200,"9":379500,"10":381100,"11":382700,"12":384200,"13":386100,"14":388000,"15":389900,"16":391700,"17":393200,"18":395000,"19":396700,"20":398300,"21":400000,"22":401400,"23":402800,"24":404200,"25":405600,"26":406800,"27":408000,"28":409000,"29":410100,"30":411300,"31":412400,"32":413500,"33":414200,"34":414900,"35":415500,"36":416200,"37":416800,"38":417400,"39":417900,"40":418300,"41":418700,"42":418900,"43":419200,"44":419500,"45":419800,"46":420100,"47":420400,"48":420700,"49":420900,"50":421200,"51":421400,"52":421700,"53":421900,"54":422200,"55":422500,"56":422800,"57":423000,"58":423300,"59":423600,"60":423800,"61":424000,"62":424300,"63":424600,"64":424800,"65":425000,"66":425300,"67":425600,"68":425800,"69":426000,"70":426300,"71":426600,"72":426800,"73":427000},"7":{"1":420700,"2":422600,"3":424500,"4":426300,"5":428100,"6":429900,"7":431700,"8":433500,"9":435100,"10":436600,"11":438100,"12":439600,"13":441100,"14":442400,"15":443700,"16":444900,"17":446100,"18":447400,"19":448700,"20":449900,"21":451100,"22":451900,"23":452700,"24":453500,"25":454100,"26":454700,"27":455300,"28":455900,"29":456600,"30":457400,"31":457800,"32":458500,"33":459000,"34":459400,"35":459800,"36":460200,"37":460600,"38":460900,"39":461200,"40":461500,"41":461800,"42":462100,"43":462400,"44":462700,"45":463000},"8":{"1":471900,"2":477200,"3":482100,"4":486700,"5":490700,"6":494100,"7":497000,"8":499500,"9":501500},"9":{"1":525300,"2":532000,"3":537100,"4":541300,"5":544700,"6":547900,"7":550800,"8":553300,"9":555300},"10":{"1":567100,"2":574100,"3":580000,"4":584800,"5":588800,"6":591700,"7":594100,"8":596000}};
+const grade = document.getElementById('grade');
+for(let g=1;g<=10;g++){const o=document.createElement('option');o.value=g;o.textContent=g+'級';grade.appendChild(o);}
+const ids=['grade','step','roleType','paid','period','service','workplace','childrenUnder16','children16to22','roleAllowance','managerAllowance'];
+const $=id=>document.getElementById(id);
+const yen=n=>Number.isFinite(n)?Math.round(n).toLocaleString('ja-JP')+' 円':'—';
+function calculate(){
+ const g=$('grade').value, s=$('step').value;
+ const salary=(s && Number.isInteger(Number(s)))?salaryTable[g]?.[s]:null;
+ $('salary').textContent=salary?yen(salary):'該当する俸給月額がありません';
+ const paid=Number($('paid').value);
+ const rate=Number($('workplace').value);
+ const under16=Number($('childrenUnder16').value||0);
+ const age16to22=Number($('children16to22').value||0);
+ const dependent=under16*13000+age16to22*18000;
+ const period=Number($('service').value);
+ const region=salary?Math.floor((salary+dependent)*rate/100):0;
+ const roleRates={1:0,2:0,3:5,4:10,5:10,6:15,7:15,8:20,9:20,10:20};
+ const roleRate=roleRates[Number(g)] ?? 0;
+ const role=salary?Math.floor((salary+region)*roleRate/100):0;
+ $('roleAllowance').value=role;
+ $('roleRate').textContent=roleRate+'%';
+ const managerRates={1:0,2:0,3:0,4:0,5:0,6:0,7:15,8:15,9:25,10:25};
+ const managerRate=$('roleType').value==='manager'?(managerRates[Number(g)] ?? 0):0;
+ const manager=salary?Math.floor(salary*managerRate/100):0;
+ $('managerAllowance').value=manager;
+ const base=salary?salary+region+role+manager:0;
+ const valid=salary && $('paid').value!=='' && Number.isFinite(paid) && paid>0 &&
+   [rate,dependent,role,manager].every(v=>Number.isFinite(v)&&v>=0) &&
+   rate<=20 && base>0 && period>0;
+ $('bSalary').textContent=salary?yen(salary):'—';
+ $('bDependent').textContent=salary?yen(dependent):'—';
+ $('bRegion').textContent=salary?yen(region):'—';
+ $('bRole').textContent=salary?yen(role):'—';
+ $('bManager').textContent=salary?yen(manager):'—';
+ $('bBase').textContent=salary?yen(base):'—';
+ $('bPeriod').textContent=(period*100).toFixed(0)+'%';
+ $('bPaid').textContent=$('paid').value?yen(paid):'—';
+ const msg=$('message');msg.style.display='none';msg.textContent='';
+ if(!salary || !$('paid').value){$('result').textContent='—';$('evaluationResult').textContent='—';$('resultSub').textContent='級・号俸と支給額を入力してください。';return;}
+ if(!valid){
+   $('result').textContent='—';
+   $('evaluationResult').textContent='—';
+   $('resultSub').textContent='入力内容を確認してください。';
+   msg.textContent=period===0?'期間率が0%のため、成績率を逆算できません。':'支給額・地域手当率・加算額の入力値を確認してください。';
+   msg.style.display='block';return;
+ }
+ const achievement=paid/(base*period)*100;
+ // 画面に表示する小数第2位までの値を一度だけ確定し、表示と評価判定の両方に使用する。
+ // 1円単位の支給額による逆算誤差で、表示上の成績率と評価が食い違うことを防ぐ。
+ const displayedRate=Number(achievement.toFixed(2));
+ $('result').textContent=displayedRate.toLocaleString('ja-JP',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
+ // 人事院規則九―四〇第13条第1号イ・ロ・ハの区分
+ // 「管理職」は本ツール上、特定管理職員として判定する。
+ const isSpecificManager=$('roleType').value==='manager';
+ const bands=isSpecificManager
+   ? {excellent:[149.25,378.75],veryGood:[134.75,149.25],good:122.25}
+   : {excellent:[125.25,318.75],veryGood:[113.75,125.25],good:102.25};
+ let evaluation='評価区分の範囲外';
+ if(displayedRate>=bands.excellent[0] && displayedRate<=bands.excellent[1]){
+   evaluation='特に優秀';
+ }else if(displayedRate>=bands.veryGood[0] && displayedRate<bands.veryGood[1]){
+   evaluation='優秀';
+ }else if(displayedRate===bands.good){
+   evaluation='良好';
+ }
+ $('evaluationResult').textContent=evaluation;
+ $('resultSub').textContent='成績率は小数第2位まで表示しています。';
+ if(achievement>500){
+   msg.textContent='算出結果が500%を超えています。地域手当率、各加算額、期間率、支給額が正しいか確認してください。';
+   msg.style.display='block';
+ }
+}
+ids.forEach(id=>$(id).addEventListener('input',calculate));
+ids.forEach(id=>$(id).addEventListener('change',calculate));
+calculate();
+</script>
+</body>
+</html>
